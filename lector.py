@@ -1,30 +1,26 @@
 import pytesseract
 from pdf2image import convert_from_path
-from PIL import Image
-import re
 import pandas as pd
+import re
 
 # Función para extraer datos clave desde un archivo PDF
 def extraer_datos_pdf(file_path):
-    # Convertir el PDF a imágenes
+    # Convertir el PDF a imágenes con resolución de 300 DPI
     pages = convert_from_path(file_path, 300)
     
-    # Realizar OCR en cada página
-    text = ''
-    for page in pages:
-        text += pytesseract.image_to_string(page)
+    # Realizar OCR en cada página y combinar el texto en una sola cadena
+    text = " ".join([pytesseract.image_to_string(page) for page in pages])
     
-    # Expresiones regulares para extraer los datos clave
+    # Expresiones regulares para extraer los datos clave (ajusta según tu documento)
     dob_pattern = r'FECHA DE NACIMIENTO\n(\d{2}-\d{2}-\d{4})'
-    lugar_nacimiento_pattern = r'LUGAR DE NACIMENTO\n(\w+)'
+    lugar_nacimiento_pattern = r'LUGAR DE NACIMIENTO\n(\w+)'
     ci_pattern_idpry = r'IDPRY(\d{7})<<'
     nacionalidad_pattern = r'NACIONALIDAD:\s*(\w+)'
-    estado_civil_pattern = r'estapocwwi:\s*(\w+)'  # Basado en el OCR aproximado
-    emision_pattern = r'FECHADEEMISION\s*(\d{2}-\d{2}-\d{4})'
-    nombre_pattern_completo = r'([A-Z]+(?:<[A-Z]+)+)<<([A-Z]+(?:<[A-Z]+)+)'
-
-
-    # Buscar los datos clave en el texto extraído
+    estado_civil_pattern = r'ESTADO CIVIL:\s*(\w+)'
+    emision_pattern = r'FECHA DE EMISION\s*(\d{2}-\d{2}-\d{4})'
+    nombre_pattern_completo = r'([A-Z]+(?:<[A-Z]+)*)<<([A-Z]+(?:<[A-Z]+)*)'
+    
+    # Buscar los datos clave en el texto extraído usando las expresiones regulares
     fecha_nacimiento = re.search(dob_pattern, text)
     lugar_nacimiento = re.search(lugar_nacimiento_pattern, text)
     numero_ci = re.search(ci_pattern_idpry, text)
@@ -57,10 +53,3 @@ def extraer_datos_pdf(file_path):
     # Retornar los datos en formato DataFrame
     df = pd.DataFrame([datos])
     return df
-
-# Cargar el PDF
-file_path = 'C:/Users/argal/Downloads/ci_prueba_2.pdf'  # Aca se agrega la direccion del archivo PDF a analizar
-df_datos = extraer_datos_pdf(file_path)
-
-# Mostrar el DataFrame con los datos extraídos
-print(df_datos)

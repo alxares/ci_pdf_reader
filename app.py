@@ -1,5 +1,6 @@
-import tkinter as tk
 from tkinter import filedialog, messagebox
+from tkinter import ttk
+import tkinter as tk
 import threading
 import os
 from lector import extraer_datos_pdf  # Importar la función de extracción del lector.py
@@ -32,16 +33,25 @@ def extraer_datos():
         # Llamar a la función de extracción de datos en el archivo lector.py
         df_datos = extraer_datos_pdf(file_path)
 
-        # Limpiar el widget de texto y mostrar los datos extraídos
-        text_resultado.delete("1.0", tk.END)
-        if not df_datos.empty:
-            text_resultado.insert(tk.END, df_datos.to_string(index=False))
-        else:
-            text_resultado.insert(tk.END, "No se encontraron datos en el documento.")
+        # Limpiar el Treeview anterior
+        for i in tree.get_children():
+            tree.delete(i)
 
-        # Eliminar el archivo temporal si se ha creado uno
-        if os.path.exists("temp.pdf"):
-            os.remove("temp.pdf")
+        if not df_datos.empty:
+            # Configurar las columnas del Treeview
+            tree["column"] = list(df_datos.columns)
+            tree["show"] = "headings"  # Mostrar solo los encabezados de columna
+
+            # Configurar encabezados y columnas
+            for col in df_datos.columns:
+                tree.heading(col, text=col)
+                tree.column(col, width=150, anchor='center')  # Ajustar ancho y centrar
+
+            # Insertar cada fila de datos en el Treeview
+            for index, row in df_datos.iterrows():
+                tree.insert("", "end", values=list(row))
+        else:
+            messagebox.showinfo("Información", "No se encontraron datos en el documento.")
 
     except Exception as e:
         messagebox.showerror("Error", f"Ha ocurrido un error: {e}")
@@ -49,10 +59,10 @@ def extraer_datos():
 # Crear la ventana principal
 ventana = tk.Tk()
 ventana.title("Extractor de Datos de PDF - Ligero")
-ventana.geometry("700x500")
+ventana.geometry("1000x600")  # Ajustar la ventana para mayor espacio
 
-# Evitar redimensionamiento para reducir la carga de renderizado
-ventana.resizable(False, False)
+# Evitar redimensionamiento
+ventana.resizable(True, True)
 
 # Etiqueta y Botón para cargar el archivo
 label_archivo = tk.Label(ventana, text="No se ha seleccionado ningún archivo", wraplength=600)
@@ -65,9 +75,25 @@ boton_cargar.pack(pady=10)
 boton_extraer = tk.Button(ventana, text="Extraer Datos", command=extraer_datos_thread)
 boton_extraer.pack(pady=10)
 
-# Text Widget para mostrar los resultados
-text_resultado = tk.Text(ventana, height=15, width=80, wrap=tk.WORD)
-text_resultado.pack(pady=20)
+# Crear Frame para contener el Treeview y las barras de desplazamiento
+frame = tk.Frame(ventana)
+frame.pack(pady=20, fill=tk.BOTH, expand=True)
+
+# Barra de desplazamiento vertical
+scroll_y = ttk.Scrollbar(frame, orient=tk.VERTICAL)
+scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
+
+# Barra de desplazamiento horizontal
+scroll_x = ttk.Scrollbar(frame, orient=tk.HORIZONTAL)
+scroll_x.pack(side=tk.BOTTOM, fill=tk.X)
+
+# Crear el Treeview con scrollbars
+tree = ttk.Treeview(frame, yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
+tree.pack(expand=True, fill=tk.BOTH)
+
+# Configurar las barras de desplazamiento para el Treeview
+scroll_y.config(command=tree.yview)
+scroll_x.config(command=tree.xview)
 
 # Ejecutar la interfaz gráfica
 ventana.mainloop()
